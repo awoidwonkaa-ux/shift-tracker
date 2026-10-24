@@ -18,15 +18,17 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 20
+          cache: 'npm'                     # FIX: кэш npm-зависимостей
 
       - name: Setup JDK 17
-        uses: actions/setup-java@v5
+        uses: actions/setup-java@v4        # FIX: v4 стабильна и поддерживает cache: 'gradle'
         with:
           java-version: '17'
           distribution: 'temurin'
+          cache: 'gradle'                  # FIX: встроенный кэш Gradle
 
       - name: Install dependencies
-        run: npm install
+        run: npm ci                        # FIX: детерминированная установка (нужен package-lock.json)
 
       - name: Build Web App
         run: npm run build
@@ -34,19 +36,24 @@ jobs:
       - name: Install Capacitor Core and Android
         run: npm install @capacitor/core @capacitor/cli @capacitor/android
 
+      # FIX: защита от повторного cap add, если папка android уже есть
       - name: Add and Sync Android Platform
         run: |
-          npx cap add android
+          if [ ! -d "android" ]; then
+            npx cap add android
+          fi
           npx cap sync android
 
+      # FIX: убраны лишние флаги; --no-daemon для CI
       - name: Build APK via Gradle
         run: |
           cd android
           chmod +x gradlew
-          ./gradlew assembleDebug -Dorg.gradle.jvmargs="-Xmx2048m"
+          ./gradlew assembleDebug --no-daemon
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: app-debug
           path: android/app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error        # FIX: падаем, если APK не создан
