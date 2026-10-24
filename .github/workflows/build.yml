@@ -18,17 +18,17 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 20
-          cache: 'npm'                     # FIX: кэш npm-зависимостей
+          cache: 'npm'
 
       - name: Setup JDK 17
-        uses: actions/setup-java@v4        # FIX: v4 стабильна и поддерживает cache: 'gradle'
+        uses: actions/setup-java@v5  # Обновил до v5, как требует GitHub на скриншоте
         with:
           java-version: '17'
           distribution: 'temurin'
-          cache: 'gradle'                  # FIX: встроенный кэш Gradle
+          # Убрали cache: 'gradle', так как папки android/ еще не существует на этом шаге!
 
       - name: Install dependencies
-        run: npm ci                        # FIX: детерминированная установка (нужен package-lock.json)
+        run: npm ci
 
       - name: Build Web App
         run: npm run build
@@ -36,7 +36,6 @@ jobs:
       - name: Install Capacitor Core and Android
         run: npm install @capacitor/core @capacitor/cli @capacitor/android
 
-      # FIX: защита от повторного cap add, если папка android уже есть
       - name: Add and Sync Android Platform
         run: |
           if [ ! -d "android" ]; then
@@ -44,7 +43,11 @@ jobs:
           fi
           npx cap sync android
 
-      # FIX: убраны лишние флаги; --no-daemon для CI
+      # Добавил официальный экшен для кэширования Gradle ПЕРЕД сборкой. 
+      # Теперь папка android/ уже существует, и кэш будет работать корректно.
+      - name: Setup Gradle Cache
+        uses: gradle/actions/setup-gradle@v3
+
       - name: Build APK via Gradle
         run: |
           cd android
@@ -56,4 +59,4 @@ jobs:
         with:
           name: app-debug
           path: android/app/build/outputs/apk/debug/app-debug.apk
-          if-no-files-found: error        # FIX: падаем, если APK не создан
+          if-no-files-found: error
