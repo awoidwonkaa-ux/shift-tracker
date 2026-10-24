@@ -31,11 +31,9 @@ jobs:
       - name: Build Web App
         run: npm run build
 
-      - name: Install Capacitor Android Dependencies
-        run: npm install @capacitor/core @capacitor/cli @capacitor/android
-
-      - name: Add and Sync Capacitor Android
+      - name: Init Capacitor and Add Android
         run: |
+          npx cap init ShiftTracker com.shift.tracker --web-dir dist --yes || true
           npx cap add android || true
           npx cap sync android
 
@@ -43,7 +41,7 @@ jobs:
         run: |
           cd android
           chmod +x gradlew
-          ./gradlew assembleDebug
+          ./gradlew assembleDebug -Dorg.gradle.jvmargs="-Xmx2048m"
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
